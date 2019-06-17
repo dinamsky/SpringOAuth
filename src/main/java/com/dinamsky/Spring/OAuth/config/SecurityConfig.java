@@ -5,6 +5,7 @@ import com.dinamsky.Spring.OAuth.repositories.UserRepository;
 import com.dinamsky.Spring.OAuth.services.AuthProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.ResourceServerProperties;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.UserInfoTokenServices;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +23,11 @@ import org.springframework.security.oauth2.client.filter.OAuth2ClientContextFilt
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.CompositeFilter;
 
 import javax.servlet.Filter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -35,7 +39,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
+    @Autowired
     OAuth2ClientContext oAuth2ClientContext;
 
     @Autowired
@@ -46,6 +50,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
     {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         return passwordEncoder;
+    }
+    @Bean
+    @ConfigurationProperties("vk.client")
+    public AuthorizationCodeResourceDetails vk() {
+        return new AuthorizationCodeResourceDetails();
+    }
+    @Bean
+    @ConfigurationProperties("vk.resource")
+    public ResourceServerProperties vkResource() {
+        return new ResourceServerProperties();
     }
 
     @Bean
@@ -72,7 +86,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
     }
 
     private Filter ssoFilter()
-    {
+
+    {   CompositeFilter filter = new CompositeFilter();
+        List<Filter> filters = new ArrayList<>();
+
         OAuth2ClientAuthenticationProcessingFilter googleFilter = new OAuth2ClientAuthenticationProcessingFilter("/login/google");
         OAuth2RestTemplate googleTemplate = new OAuth2RestTemplate(google(), oAuth2ClientContext);
         googleFilter.setRestTemplate(googleTemplate);
@@ -81,24 +98,35 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
         googleFilter.setTokenServices(tokenServices);
         tokenServices.setUserRepo(userRepo);
         tokenServices.setPasswordEncoder(passwordEncoder);
-        return googleFilter;
+       filters.add(googleFilter);
+
+        OAuth2ClientAuthenticationProcessingFilter vkFilter = new OAuth2ClientAuthenticationProcessingFilter("/login/facebook");
+        OAuth2RestTemplate vkTemplate = new OAuth2RestTemplate(vk(), oAuth2ClientContext);
+        vkFilter.setRestTemplate(vkTemplate);
+        UserInfoTokenServices tokenServicesvk = new UserInfoTokenServices(vkResource().getUserInfoUri(), vk().getClientId());
+        tokenServices.setRestTemplate(vkTemplate);
+        vkFilter.setTokenServices(tokenServicesvk);
+        filters.add(vkFilter);
+
+        filter.setFilters(filters);
+
+        return filter;
     }
+
 
 
     @Override
     protected void configure(HttpSecurity http) throws Exception
     {
-        http
-                .authorizeRequests()
+        http.authorizeRequests()
                 .antMatchers("/resources/**", "/", "/login**", "/registration").permitAll()
                 .anyRequest().authenticated()
                 .and().formLogin().loginPage("/login")
                 .defaultSuccessUrl("/notes").failureUrl("/login?error").permitAll()
                 .and().logout().logoutSuccessUrl("/").permitAll();
-
         http
                 .addFilterBefore(ssoFilter(), UsernamePasswordAuthenticationFilter.class);
-        http.csrf().disable();
+
     }
 
     @Override
