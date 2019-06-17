@@ -5,6 +5,7 @@ import com.dinamsky.Spring.OAuth.entities.User;
 import com.dinamsky.Spring.OAuth.repositories.UserRepository;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.AuthoritiesExtractor;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.FixedAuthoritiesExtractor;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.FixedPrincipalExtractor;
@@ -37,8 +38,9 @@ public class CustomUserInfoTokenServices implements ResourceServerTokenServices 
     private String tokenType = "Bearer";
     private AuthoritiesExtractor authoritiesExtractor = new FixedAuthoritiesExtractor();
     private PrincipalExtractor principalExtractor = new FixedPrincipalExtractor();
-
+    @Autowired
     private UserRepository userRepo;
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     public CustomUserInfoTokenServices(){}

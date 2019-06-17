@@ -1,3 +1,4 @@
+package com.dinamsky.Spring.OAuth.config;
 
 import com.dinamsky.Spring.OAuth.config.CustomUserInfoTokenServices;
 import com.dinamsky.Spring.OAuth.repositories.UserRepository;
@@ -35,8 +36,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private OAuth2ClientContext oAuth2ClientContext;
+    OAuth2ClientContext oAuth2ClientContext;
 
     @Autowired
     private UserRepository userRepo;
@@ -98,7 +98,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
 
         http
                 .addFilterBefore(ssoFilter(), UsernamePasswordAuthenticationFilter.class);
-//        http.csrf().disable();
+        http.csrf().disable();
     }
 
     @Override
